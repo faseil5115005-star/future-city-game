@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مدينة المستقبل</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Tahoma,Arial;background:#e7f5f4;color:#173b4a}
+header{background:#087f8c;color:white;padding:15px;text-align:center}
+h1{font-size:25px;margin:5px}
+.stats{display:flex;justify-content:space-around;background:#fff;padding:13px;font-weight:bold}
+main{max-width:750px;margin:auto;padding:12px}
+.city{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;background:#6e8990;padding:10px;border:5px solid #fff;border-radius:18px}
+.plot{aspect-ratio:1;background:#8bcf85;border:2px solid #e4f8d7;border-radius:10px;font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 -7px #5da65d}
+.plot:active{transform:scale(.96)}
+.panel{background:white;border-radius:15px;padding:15px;margin-top:12px;box-shadow:0 3px 12px #0001}
+button{border:0;border-radius:10px;padding:12px;background:#087f8c;color:white;font-weight:bold;font-size:15px;cursor:pointer}
+button:disabled{opacity:.4}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.actions button{background:#147f91}
+#message{background:#e0f7ec;padding:12px;border-radius:10px;margin-top:12px}
+#answers{display:grid;gap:8px}
+#answers button{background:#e8f3f5;color:#173b4a;border:1px solid #8bbdc5}
+small{color:#52727a}
+</style>
+</head>
+<body>
+<header><h1>🏙️ مدينة المستقبل</h1><div>ابنِ مدينتك بالعلم وحافظ على البيئة 🌱</div></header>
+<div class="stats">
+<span>🪙 <b id="coins">500</b></span>
+<span>⭐ <b id="score">0</b></span>
+<span>🏆 المستوى <b id="level">1</b></span>
+</div>
+<main>
+<div class="panel">
+<h3>🗺️ خريطة مدينتك</h3>
+<div class="city" id="city"></div>
+<p><small>اختر مبنى ثم اضغط على أرض فارغة لبنائه.</small></p>
+</div>
+<div class="panel">
+<h3>🏗️ متجر المباني</h3>
+<div class="actions" id="shop"></div>
+</div>
+<div class="panel">
+<h3>🧠 تحدي المعرفة</h3>
+<p id="question"></p>
+<div id="answers"></div>
+</div>
+<div class="panel">
+<h3>🌍 مهمة المدينة</h3>
+<p id="mission"></p>
+<button onclick="newMission()">تحديث المهمة</button>
+<div id="message">مرحبًا بك! ابدأ ببناء مدينة المستقبل.</div>
+</div>
+</main>
+<script>
+const buildings=[
+{name:"منزل",icon:"🏠",cost:100},
+{name:"مدرسة",icon:"🏫",cost:200},
+{name:"حديقة",icon:"🌳",cost:80},
+{name:"مستشفى",icon:"🏥",cost:300},
+{name:"طاقة شمسية",icon:"☀️",cost:150},
+{name:"محطة مياه",icon:"💧",cost:180},
+{name:"مصنع أخضر",icon:"🏭",cost:250},
+{name:"مركز أبحاث",icon:"🔬",cost:350}
+];
+const questions=[
+["ما مصدر الطاقة المتجددة؟",["الفحم","الشمس","النفط"],1],
+["ما الغاز الذي تمتصه النباتات؟",["ثاني أكسيد الكربون","الأكسجين","النيتروجين"],0],
+["كم يساوي 12 × 5؟",["50","60","70"],1],
+["كيف نحافظ على الماء؟",["ترك الصنبور مفتوحًا","إصلاح التسربات","زيادة الهدر"],1],
+["أي المواد يمكن إعادة تدويرها؟",["الورق","بقايا الطعام الفاسد","الدخان"],0],
+["ما وظيفة الألواح الشمسية؟",["توليد الكهرباء","تلويث الهواء","استهلاك الوقود"],0],
+["ما ناتج 144 ÷ 12؟",["10","12","14"],1],
+["كيف نقلل تلوث الهواء؟",["زيادة الحرق","زراعة الأشجار","هدر الطاقة"],1],
+["ما الكوكب الذي نعيش عليه؟",["المريخ","الأرض","الزهرة"],1],
+["ما أفضل وسيلة لترشيد الكهرباء؟",["إطفاء الأجهزة غير المستخدمة","تشغيل الإنارة دائمًا","فتح الثلاجة طويلًا"],0]
+];
+let state;
+try{state=JSON.parse(localStorage.getItem("futureCitySave"))}catch(e){}
+if(!state||!Array.isArray(state.map)||state.map.length!==24){
+state={coins:500,score:0,map:Array(24).fill(-1),answered:0};
+}
+let selected=0;
+let currentQuestion=0;
+function save(){localStorage.setItem("futureCitySave",JSON.stringify(state))}
+function message(t){document.getElementById("message").textContent=t}
+function render(){
+document.getElementById("coins").textContent=state.coins;
+document.getElementById("score").textContent=state.score;
+document.getElementById("level").textContent=1+Math.floor(state.score/300);
+document.getElementById("city").innerHTML=state.map.map((b,i)=>'<div class="plot" onclick="build('+i+')">'+(b<0?'🌱':buildings[b].icon)+'</div>').join("");
+document.getElementById("shop").innerHTML=buildings.map((b,i)=>'<button style="outline:'+(selected===i?'3px solid #ffbf47':'none')+'" onclick="selectBuilding('+i+')">'+b.icon+' '+b.name+'<br>'+b.cost+' 🪙</button>').join("");
+}
+function selectBuilding(i){selected=i;render();message("اختر أرضًا فارغة لبناء "+buildings[i].name)}
+function build(i){
+if(state.map[i]>=0){message("هذه الأرض تحتوي على مبنى بالفعل.");return}
+let b=buildings[selected];
+if(state.coins<b.cost){message("عملاتك لا تكفي. أجب عن الأسئلة لتكسب المزيد.");return}
+state.coins-=b.cost;state.map[i]=selected;state.score+=20;
+save();render();message("رائع! تم بناء "+b.name+" بنجاح 🎉");
+}
+function ask(){
+currentQuestion=state.answered%questions.length;
+let q=questions[currentQuestion];
+document.getElementById("question").textContent=q[0];
+document.getElementById("answers").innerHTML=q[1].map((a,i)=>'<button onclick="answer('+i+')">'+a+'</button>').join("");
+}
+function answer(i){
+let q=questions[currentQuestion];
+if(i===q[2]){
+state.coins+=100;state.score+=50;
+message("إجابة صحيحة! ربحت 100 عملة و50 نقطة 🎉");
+}else{
+message("إجابة غير صحيحة. الإجابة الصحيحة: "+q[1][q[2]]);
+}
+state.answered++;save();render();ask();
+}
+const missions=[
+"ابنِ حديقة لتحسين جودة الهواء 🌳",
+"أنشئ محطة طاقة شمسية لتوليد كهرباء نظيفة ☀️",
+"ابنِ مدرسة لنشر المعرفة 🏫",
+"أنشئ محطة مياه للمحافظة على الموارد 💧",
+"ابنِ مركز أبحاث لتطوير مدينتك 🔬"
+];
+let missionIndex=0;
+function newMission(){
+document.getElementById("mission").textContent=missions[missionIndex%missions.length];
+missionIndex++;
+}
+render();ask();newMission();
+</script>
+</body>
+</html>
